@@ -34,7 +34,7 @@ This and other SPSS Python Extension functions can be found at http://www.stat-h
 * "waittime" is an optional argument that specifies how many seconds the program should wait after running the Mplus program before it tries to read the output file. This defaults to 5. You should be sure that you leave enough time for Mplus to finish the analyses before trying to import them into SPSS
 
 ## Example: 
-**MplusLPA(inpfile = "D:/Personality/Mplus/model.inp,  
+**MplusLPA(inpfile = "D:/Personality/Mplus/model.inp",  
 modellabel = "3-group LPA",  
 variableList = ["Openness", "Concientiousness", "Extraversion", "Agreeableness", "Neuroticism"],  
 groups = 3,  

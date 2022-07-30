@@ -12,11 +12,11 @@
 * your variables as continuous (LPA) or categorical (LCA).
 
 **** Usage: MplusLPA(inpfile, modellabel, runModel, viewOutput, suppressSPSS,
-variableList, groups, starts, stiterations, 
+variableList, groups, starts, stiterations, optseed, svalues,
 estimator, useobservations, 
 categorical, censored, count, nominal, idvariable,
 modelDatasetName, meanDatasetName, datasetLabels, 
-savedata, saveCprob, waittime)
+savedata, saveCprob, processors, waittime)
 **** "inpfile" is a string identifying the directory and filename of
 * Mplus input file to be created by the program. This filename must end with
 * .inp . The data file will automatically be saved to the same directory. This
@@ -54,6 +54,15 @@ savedata, saveCprob, waittime)
 **** "stiterations" is an optional argument indicating the number of initial
 * stage iterations. The Mplus default is 10, but it is not unreasonable to 
 * increase this to 20, 40, or 100 if you have problems with estimation.
+**** "optseed" is a number indicating the seed that should be used
+* to define randomization in the analysis. If this argument is omitted 
+* then Mplus will choose one or more random seeds for the analysis.
+**** "svalues" is a lists that allows you to swap the order of the
+* profiles in the analysis. The number in the first
+* list is the new number for the original first profile, the number in the
+* second slot is the new number for the original second profile, etc.
+* This is usually combined with a defined optseed so that you know 
+* the ordering of the original profiles.
 **** "estimator" is a string specifying the estimation method to be used. 
 * Valid values are ML, MLM, MLMV, MLR, MLF, MUML, WLS, WLSM,
 * WLSMV, ULS, ULSMV, GLS, and BAYES. If this argument is omitted,
@@ -98,13 +107,17 @@ savedata, saveCprob, waittime)
 * None, which does not save the data file.
 **** "saveCprob" is an optional boolean argument that determines whether the 
 * class or profile probabilities are included in the saved data file.
+**** "processors" is an optional argument that specifies how many logical processors 
+* Mplus should use when running the analysis. You should not specify more 
+* processors than are available in your machine. If this argument is omitted, Mplus will
+* use 1 processor.
 **** "waittime" is an optional argument that specifies how many seconds
 * the program should wait after running the Mplus program before it 
 * tries to read the output file. This defaults to 5. You should be sure that
 * you leave enough time for Mplus to finish the analyses before trying
 * to import them into SPSS
 
-**** Example: 
+**** Example 1 - Random starts: 
 MplusLPA(inpfile = "D:/Personality/Mplus/model.inp,
 modellabel = "3-group LPA",
 variableList = ["Openness", "Concientiousness", "Extraversion",
@@ -119,6 +132,35 @@ waittime = 20)
 * This program would conduct a 3-group latent profile analysis of the Big 5
 personality scales.
 * It would use 500 random starts and 20 initial stage iterations.
+* Information about the profile analysis would be saved to an SPSS data
+set named "Personality".
+* The full data set including the assigned profile as well as the probabilities 
+associated with each profile would be saved to the file 
+"D:/Personality/Mplus/model.txt".
+
+**** Example 2 - Running a specific random seed: 
+MplusLPA(inpfile = "D:/Personality/Mplus/model.inp,
+modellabel = "3-group LPA",
+variableList = ["Openness", "Concientiousness", "Extraversion",
+"Agreeableness", "Neuroticism"], 
+groups = 3,
+optseed = 76609,
+svalues = [3, 1, 2],
+modelDatasetName = "Personality",
+savedata = "D:/Personality/Mplus/model.txt",
+saveCprob = True,
+waittime = 20)
+* This program would conduct a 3-group latent profile analysis of the Big 5
+personality scales.
+* Instead of using random starts, this program conducts a single run using
+seed 76609.
+* The order of the profiles is changed so that what was the last profile
+is now the first, what was the first profile is now the second, and what was the 
+second profile is now the third. 
+* Typically you would first identify what random seed you want to run, then
+run the program initially without having anything in svalues to understand
+what the original profiles look like, and then rerun it using the svales argument
+to set the profile order to be what you want.
 * Information about the profile analysis would be saved to an SPSS data
 set named "Personality".
 * The full data set including the assigned profile as well as the probabilities 
@@ -300,8 +342,26 @@ alter type ddate7663804 (date11).
 ALTER TYPE ALL (DATE = F11.0).
 alter type ddate7663804 (adate11).
 ALTER TYPE ALL (ADATE = F11.0).
+alter type ddate7663804 (sdate11).
+ALTER TYPE ALL (SDATE = F11.0).
+alter type ddate7663804 (edate11).
+ALTER TYPE ALL (EDATE = F11.0).
+alter type ddate7663804 (jdate11).
+ALTER TYPE ALL (JDATE = F11.0).
+alter type ddate7663804 (datetime17).
+ALTER TYPE ALL (DATETIME = F11.0).
 alter type ddate7663804 (time11).
 ALTER TYPE ALL (TIME = F11.0).
+alter type ddate7663804 (qyr6).
+ALTER TYPE ALL (QYR = F11.0).
+alter type ddate7663804 (moyr6).
+ALTER TYPE ALL (MOYR = F11.0).
+alter type ddate7663804 (ymdhms16).
+ALTER TYPE ALL (YMDHMS = F11.0).
+alter type ddate7663804 (wkday3).
+ALTER TYPE ALL (WKDAY = F11.0).
+alter type ddate7663804 (month3).
+ALTER TYPE ALL (MONTH = F11.0).
 
 delete variables ddate7663804."""
  spss.Submit(submitstring)
@@ -405,7 +465,7 @@ categorical, censored, count, nominal, idvariable, auxiliary):
         self.variable += ";\n\nMISSING ARE ALL (-999);"
         self.variable += "\n\nclasses = group ("+ str(groups) + ");"
         
-    def setAnalysis(self, estimator, starts, stiterations):
+    def setAnalysis(self, estimator, starts, stiterations, optseed, processors):
         self.analysis += "type = mixture;"
         if (estimator != None):
             self.analysis += "\nestimator = {0};".format(estimator)
@@ -413,13 +473,22 @@ categorical, censored, count, nominal, idvariable, auxiliary):
             self.analysis += "\nstarts = {0} {1};".format(str(starts), str(int(starts/5)))
         if (stiterations != None):
             self.analysis += "\nstiterations = {0};".format(str(stiterations))
+        if (optseed != None):
+            self.analysis += "\noptseed = {0};".format(str(optseed))
+        if (processors != None):
+            self.analysis += "\nprocessors = {0};".format(str(processors))
 
-    def setOutput(self, outputText):
-        self.output += outputText
+    def setOutput(self, svalues):
+        if (svalues != None):
+            self.output += "\nsvalues ("
+            for o in svalues:
+                self.output += str(o) + " "
+            self.output += ");"
 
     def setSavedata(self, savedata, saveCprob):
         if (savedata != None):
-            self.savedata += "\nfile = {0};".format(savedata)
+            splitName = MplusSplit(savedata, 75)
+            self.savedata += "\nfile = \n'{0}';".format(splitName)
             if (saveCprob == True):
                 self.savedata += "\nsave = cprob;"
 
@@ -701,7 +770,7 @@ dataset name {1}.""".format(dsetname, modelDatasetName)
         for t in range(start, start + groups):
             line = blockLines[t]
             words = ' '.join(line.split()).split(" ")
-            n = int(words[1])
+            n = round(float(words[1]))
             if (n < MinimumN):
                 MinimumN = n
                 MinimumProp = float(words[2])
@@ -823,15 +892,15 @@ dataset name {1}.""".format(dsetname, meanDatasetName)
 def MplusLPA(inpfile, modellabel = "MplusLPA",
 runModel = True, viewOutput = True, suppressSPSS = False, 
 variableList = None, groups = None, starts = None, stiterations = None,
-estimator = None,
-useobservations = None, 
+optseed = None, svalues = None,
+estimator = None, useobservations = None, 
 categorical = None, censored = None, count = None, nominal = None,
 idvariable = None, auxiliary = None, 
 modelDatasetName = None, 
 meanDatasetName = None,
 datasetLabels = [], 
 savedata = None, saveCprob = False, 
-waittime = 5):
+processors = None, waittime = 5):
 
     spss.Submit("display scratch.")
 
@@ -909,6 +978,7 @@ waittime = 5):
                 MplusUseobservations = z.sub(m, MplusUseobservations)
                 
 # Convert idvariable to Mplus
+        MplusIdvariable = ""
         if (idvariable == None):
             MplusIdvariable = None
         else:
@@ -945,7 +1015,8 @@ MplusCensored, MplusCount, MplusNominal, MplusVariableList]
         pathProgram.setVariable(MplusVariables, MplusVariableList, groups, MplusUseobservations, 
 MplusCategorical, MplusCensored, MplusCount, MplusNominal, MplusIdvariable,
 MplusAuxiliary)
-        pathProgram.setAnalysis(estimator, starts, stiterations)
+        pathProgram.setAnalysis(estimator, starts, stiterations, optseed, processors)
+        pathProgram.setOutput(svalues)
         pathProgram.setSavedata(savedata, saveCprob)
         pathProgram.write(outdir + fname + ".inp")
 
@@ -1001,3 +1072,10 @@ set printback = on.
 * 2022-01-07 Removed extra print statements
 * 2022-01-30 Added Ns to mean data set
 * 2022-02-03 Fixed start and stiterations implementation
+* 2022-02-13 Added processors argument
+* 2022-03-21 Added additional date types
+* 2022-03-28 Allowed splitting of savedata filename
+* 2022-03-30 Initialized MplusIdvariable
+* 2022-07-19 Used round() instead of int() when calculating minimum n
+* 2022-07-26 Corrected data type error when saving model data set
+COMMENT BOOKMARK;LINE_NUM=467;ID=1.

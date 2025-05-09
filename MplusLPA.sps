@@ -959,6 +959,7 @@ def MplusLPA(inpfile, modellabel="MplusLPA",
         MplusVariables = exportMplus(dataname)
 
         # Convert useobservations to Mplus
+        MplusUseobservations = None
         if useobservations:
             MplusUseobservations = useobservations
             for s, m in zip(SPSSvariablesCaps, MplusVariables):
@@ -1062,3 +1063,4 @@ set printback = on.
 * 2022-07-19 Used round() instead of int() when calculating minimum n
 * 2022-07-26 Corrected data type error when saving model data set
 * 2024-05-29 Updated to Python 3
+* 2025-05-05 Corrected MplusUseobservations error
